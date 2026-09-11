@@ -5,109 +5,164 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Spout Finance Beta Review</title>
 <meta name="description" content="An independent technical teardown and hands-on review of the Spout Finance beta: the economics of a 0% covered-call loan, live UX findings, and bug reports.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#f7f7f5; --panel:#ffffff; --ink:#161719; --muted:#5c6169; --line:#e4e4e0;
-    --accent:#1d4ed8; --accent-soft:#eaf0ff;
-    --crit:#b42318; --crit-bg:#fdecea; --high:#b54708; --high-bg:#fdf0e6;
-    --med:#8a6d00; --med-bg:#fbf5df; --low:#3f6212; --low-bg:#eef6e4; --info-bg:#eef2fb;
-    --code:#f2f2ef; --shadow:0 1px 3px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.05);
+    /* Spout light: clean cream-white ground, deep-navy ink, royal-blue accents */
+    --bg:#f6f2ea; --panel:#ffffff; --ink:#0e1a33; --muted:#5a6379; --line:#e3ddce;
+    --accent:#2f6bd6; --accent-deep:#082567; --accent-bright:#4570d0; --accent-soft:#eaf0ff;
+    --cream:#efe9dc; --mint:#0e9e6e;
+    --crit:#c0362c; --crit-bg:#fbe9e6; --high:#b25a12; --high-bg:#fbefe1;
+    --med:#8a6d00; --med-bg:#f9f2d9; --low:#0f7a55; --low-bg:#e4f4ec; --info-bg:#eaf0ff;
+    --code:#eef1f7; --glow:transparent;
+    --shadow:0 1px 2px rgba(8,37,103,.05),0 10px 30px rgba(8,37,103,.06);
   }
   @media (prefers-color-scheme:dark){
     :root:not([data-theme="light"]){
-      --bg:#0e0f12; --panel:#16181d; --ink:#e9eaec; --muted:#9aa0aa; --line:#262a31;
-      --accent:#6d9bff; --accent-soft:#1a2540;
-      --crit:#ff7a6e; --crit-bg:#2a1613; --high:#ffab5c; --high-bg:#2a1e10; --med:#e8cf6b; --med-bg:#242010;
-      --low:#a7d67a; --low-bg:#17220f; --info-bg:#141a2b;
-      --code:#1c1f26; --shadow:0 1px 3px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+      /* Spout dark: navy-black canvas, electric-blue accents, blue glow */
+      --bg:#05080f; --panel:#0b1220; --ink:#e9eefb; --muted:#8f9cba; --line:#182339;
+      --accent:#6f9bff; --accent-deep:#2f6bd6; --accent-bright:#8fb4ff; --accent-soft:#0f1e3d;
+      --cream:#141c2c; --mint:#3ee6a6;
+      --crit:#ff8579; --crit-bg:#2a1512; --high:#f0a95a; --high-bg:#271b0e; --med:#e6cd6a; --med-bg:#221e0e;
+      --low:#4fd39a; --low-bg:#0c2119; --info-bg:#0f1e3d; --code:#111a2c;
+      --glow:radial-gradient(120% 90% at 20% -10%,rgba(111,155,255,.20),rgba(47,107,214,.06) 40%,transparent 70%);
+      --shadow:0 1px 3px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.4);
     }
+  }
+  :root[data-theme="dark"]{
+    --bg:#05080f; --panel:#0b1220; --ink:#e9eefb; --muted:#8f9cba; --line:#182339;
+    --accent:#6f9bff; --accent-deep:#2f6bd6; --accent-bright:#8fb4ff; --accent-soft:#0f1e3d;
+    --cream:#141c2c; --mint:#3ee6a6;
+    --crit:#ff8579; --crit-bg:#2a1512; --high:#f0a95a; --high-bg:#271b0e; --med:#e6cd6a; --med-bg:#221e0e;
+    --low:#4fd39a; --low-bg:#0c2119; --info-bg:#0f1e3d; --code:#111a2c;
+    --glow:radial-gradient(120% 90% at 20% -10%,rgba(111,155,255,.20),rgba(47,107,214,.06) 40%,transparent 70%);
+    --shadow:0 1px 3px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.4);
   }
   *{box-sizing:border-box}
   body{background:var(--bg);color:var(--ink);
-    font:400 17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    -webkit-font-smoothing:antialiased;margin:0}
-  .wrap{max-width:820px;margin:0 auto;padding:0 20px;padding-block:0}
-  header.masthead{padding-block:56px 30px;border-bottom:1px solid var(--line)}
-  .kicker{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 14px}
-  h1{font-size:clamp(30px,5.2vw,46px);line-height:1.08;letter-spacing:-.02em;margin:0 0 18px;font-weight:800}
-  .dek{font-size:20px;color:var(--muted);margin:0 0 22px;line-height:1.5}
-  .byline{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:14.5px;color:var(--muted)}
-  .byline b{color:var(--ink)}
-  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
-  .pill{font-size:12.5px;padding:4px 11px;border-radius:999px;background:var(--code);border:1px solid var(--line);color:var(--muted)}
-  main{padding-block:14px 60px}
-  h2{font-size:26px;letter-spacing:-.01em;margin:52px 0 6px;font-weight:800;line-height:1.15}
-  h2 .num{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:10px}
-  h3{font-size:18.5px;margin:34px 0 6px;font-weight:700}
+    font:400 17px/1.66 "Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;margin:0}
+  .wrap{max-width:824px;margin:0 auto;padding:0 20px;padding-block:0}
+  /* masthead with subtle Spout blue glow (esp. dark) */
+  header.masthead{position:relative;padding-block:34px 32px;border-bottom:1px solid var(--line);overflow:hidden}
+  header.masthead::before{content:"";position:absolute;inset:0;background:var(--glow);pointer-events:none}
+  header.masthead>.wrap{position:relative}
+  /* wordmark lockup: typeset "spout finance" + blue wave mark */
+  .wordmark{display:inline-flex;align-items:center;gap:9px;margin:0 0 26px;font-family:"Space Grotesk",sans-serif;
+    font-weight:700;font-size:19px;letter-spacing:-.02em;color:var(--ink)}
+  .wordmark svg{display:block;width:30px;height:16px;flex:none}
+  .wordmark .fin{color:var(--muted);font-weight:600}
+  .kicker{font-family:"Space Grotesk",sans-serif;font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;margin:0 0 15px;display:inline-flex;align-items:center;gap:9px}
+  .kicker::before{content:"";width:22px;height:2px;border-radius:2px;background:var(--accent)}
+  h1{font-family:"Space Grotesk",sans-serif;font-size:clamp(31px,5.4vw,50px);line-height:1.04;
+    letter-spacing:-.025em;margin:0 0 16px;font-weight:700}
+  /* Spout blue wave accent under the H1 */
+  .h1wave{display:block;width:132px;height:11px;margin:0 0 20px;color:var(--accent)}
+  .dek{font-size:20px;color:var(--muted);margin:0 0 24px;line-height:1.5;max-width:64ch}
+  .byline{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:14.5px;color:var(--muted)}
+  .byline b{color:var(--ink);font-weight:600}
+  .byline .sep{color:var(--accent);opacity:.55}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .pill{font-size:12.5px;font-weight:500;padding:5px 13px;border-radius:999px;
+    background:var(--accent-soft);border:1px solid transparent;color:var(--accent-deep)}
+  :root[data-theme="dark"] .pill,
+  :root:not([data-theme="light"]) .pill{color:var(--accent-bright)}
+  main{padding-block:16px 60px}
+  h2{font-family:"Space Grotesk",sans-serif;font-size:28px;letter-spacing:-.02em;margin:54px 0 6px;
+    font-weight:700;line-height:1.14}
+  h2 .num{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:12px;font-weight:600}
+  h3{font-family:"Space Grotesk",sans-serif;font-size:19px;margin:34px 0 6px;font-weight:600;letter-spacing:-.01em}
   h2+.sub{color:var(--muted);margin:0 0 14px;font-size:15.5px}
   p{margin:16px 0}
-  a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(47,107,214,.3);transition:border-color .15s}
   a:hover{border-bottom-color:currentColor}
-  code{background:var(--code);padding:1px 6px;border-radius:5px;font-size:.86em;
-    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  code{background:var(--code);padding:1.5px 6px;border-radius:5px;font-size:.85em;
+    font-family:"JetBrains Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace}
   strong{font-weight:700}
   .lede{font-size:19px}
+  /* key inline stats get the Spout tabular-blue treatment */
+  .stat{color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
   /* severity tag */
-  .sev{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
-    padding:3px 9px;border-radius:6px;vertical-align:middle;margin-left:2px}
+  .sev{display:inline-block;font-family:"Space Grotesk",sans-serif;font-size:11px;font-weight:600;
+    letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:6px;vertical-align:middle;margin-left:2px}
   .sev.crit{color:var(--crit);background:var(--crit-bg)} .sev.high{color:var(--high);background:var(--high-bg)}
   .sev.med{color:var(--med);background:var(--med-bg)} .sev.low{color:var(--low);background:var(--low-bg)}
   .sev.info{color:var(--accent);background:var(--info-bg)}
   /* exec summary cards */
   .summary{display:grid;gap:14px;margin:26px 0 10px}
-  .finding{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
+  .finding{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
   .finding .ftop{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
-  .finding h4{margin:0;font-size:17px;font-weight:700;flex:1;min-width:60%}
+  .finding h4{margin:0;font-family:"Space Grotesk",sans-serif;font-size:17px;font-weight:600;flex:1;min-width:60%;letter-spacing:-.01em}
   .finding p{margin:6px 0 0;font-size:15.5px;color:var(--muted)}
-  .finding p b{color:var(--ink)}
+  .finding p b{color:var(--ink);font-weight:600}
   /* figures */
-  figure{margin:26px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow)}
+  figure{margin:26px 0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow)}
   figure img{display:block;width:100%;height:auto}
-  figcaption{font-size:13.5px;color:var(--muted);padding:11px 16px;border-top:1px solid var(--line);background:var(--panel)}
-  figcaption b{color:var(--ink)}
+  figcaption{font-size:13.5px;color:var(--muted);padding:12px 16px;border-top:1px solid var(--line);background:var(--cream)}
+  figcaption b{color:var(--ink);font-weight:600}
   /* bug block */
-  .bug{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;
+  .bug{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;
     background:var(--panel);padding:16px 18px;margin:22px 0;box-shadow:var(--shadow)}
   .bug.med{border-left-color:var(--med)} .bug.low{border-left-color:var(--low)} .bug.blk{border-left-color:var(--muted)}
-  .bug h4{margin:0 0 4px;font-size:16.5px}
-  .bug .repro{font-size:14px;color:var(--muted);margin:10px 0 0;font-family:"SF Mono",ui-monospace,Menlo,monospace;
-    background:var(--code);padding:9px 12px;border-radius:7px;line-height:1.5}
+  .bug h4{margin:0 0 4px;font-family:"Space Grotesk",sans-serif;font-size:16.5px;font-weight:600;letter-spacing:-.01em}
+  .bug .repro{font-size:14px;color:var(--muted);margin:10px 0 0;
+    font-family:"JetBrains Mono","SF Mono",ui-monospace,Menlo,monospace;
+    background:var(--code);padding:9px 12px;border-radius:8px;line-height:1.5}
   .bug p{margin:8px 0 0;font-size:15.5px}
   /* tables */
-  .tbl{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+  .tbl{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
   table{border-collapse:collapse;width:100%;font-size:14.5px;background:var(--panel)}
-  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);white-space:nowrap}
-  th{font-weight:700;font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--code)}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:12px;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--accent-deep);background:var(--accent-soft)}
+  :root[data-theme="dark"] th,
+  :root:not([data-theme="light"]) th{color:var(--accent-bright)}
   tbody tr:last-child td{border-bottom:none}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .hot{color:var(--crit);font-weight:700}
   /* callout */
-  .note{background:var(--info-bg);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:24px 0}
-  .note h4{margin:0 0 6px;font-size:16px}
+  .note{background:var(--accent-soft);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:14px;padding:18px 20px;margin:24px 0}
+  .note h4{margin:0 0 6px;font-family:"Space Grotesk",sans-serif;font-size:16px;font-weight:600;letter-spacing:-.01em}
   .note p{margin:8px 0 0;font-size:15px}
-  blockquote{margin:18px 0;padding:2px 0 2px 18px;border-left:3px solid var(--line);color:var(--muted);font-size:15.5px}
+  blockquote{margin:18px 0;padding:2px 0 2px 18px;border-left:3px solid var(--accent);color:var(--muted);font-size:15.5px}
   ul,ol{padding-left:22px} li{margin:7px 0}
-  .rec{counter-reset:none}
+  ol.rec{counter-reset:rec;list-style:none;padding-left:0}
+  ol.rec>li{counter-increment:rec;position:relative;padding-left:44px;margin:16px 0}
+  ol.rec>li::before{content:counter(rec);position:absolute;left:0;top:1px;width:28px;height:28px;
+    display:flex;align-items:center;justify-content:center;border-radius:8px;
+    font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums;
+    color:#fff;background:var(--accent);box-shadow:0 2px 8px rgba(47,107,214,.35)}
   hr{border:none;border-top:1px solid var(--line);margin:48px 0}
   footer{border-top:1px solid var(--line);padding-block:26px 60px;color:var(--muted);font-size:14px}
-  .disc{font-size:14.5px;color:var(--muted);background:var(--code);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:26px 0}
-  .disc b{color:var(--ink)}
+  .disc{font-size:14.5px;color:var(--muted);background:var(--cream);border:1px solid var(--line);
+    border-radius:14px;padding:18px 20px;margin:26px 0}
+  .disc b{color:var(--ink);font-weight:600}
 </style>
 </head>
 <body>
 
 <header class="masthead">
   <div class="wrap">
+    <div class="wordmark" aria-label="spout finance">
+      <svg viewBox="0 0 30 16" fill="none" aria-hidden="true"><path d="M1 11C4 4 7 4 10 8s6 4 9-3 6-6 9-2" stroke="url(#wm)" stroke-width="2.6" stroke-linecap="round"/><defs><linearGradient id="wm" x1="0" y1="0" x2="30" y2="16" gradientUnits="userSpaceOnUse"><stop stop-color="#6f9bff"/><stop offset="1" stop-color="#2f6bd6"/></linearGradient></defs></svg>
+      <span>spout <span class="fin">finance</span></span>
+    </div>
     <p class="kicker">Protocol Teardown &amp; Beta Review</p>
     <h1>Spout Finance: what a &ldquo;0% interest&rdquo; loan actually costs</h1>
+    <svg class="h1wave" viewBox="0 0 132 11" fill="none" aria-hidden="true"><path d="M2 7C13 1 24 1 35 7s22 6 33 0 22-6 33 0 22 6 27 3" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
     <p class="dek">A hands-on review of the Spout beta paired with a docs-based economic teardown &mdash; where the design is genuinely novel, where the numbers don&rsquo;t reconcile, and one bug that gets the headline number exactly backwards.</p>
     <div class="byline">
       <span>By <b>Arthur Smith</b></span>
-      <span>&middot;</span>
+      <span class="sep">&middot;</span>
       <span>11 September 2026</span>
-      <span>&middot;</span>
+      <span class="sep">&middot;</span>
       <span>~14 min read</span>
-      <span>&middot;</span>
+      <span class="sep">&middot;</span>
       <span>Independent &amp; unaffiliated</span>
     </div>
     <div class="pills">
@@ -122,7 +177,7 @@
 
 <main class="wrap">
 
-  <p class="lede">Spout Finance lets you buy tokenized US stocks on Solana and borrow stablecoins against them at <strong>0% interest</strong>. It is one of the more interesting things I&rsquo;ve seen in the tokenized-equity space this year, because the 0% is not a marketing gimmick funded by a token emission &mdash; it is funded by a real cash flow: weekly covered calls written on the collateral. That makes it worth taking seriously, and taking seriously means asking the question the docs never quite answer: <em>if the loan is free, who is paying for it?</em></p>
+  <p class="lede">Spout Finance lets you buy tokenized US stocks on Solana and borrow stablecoins against them at <strong class="stat">0% interest</strong>. It is one of the more interesting things I&rsquo;ve seen in the tokenized-equity space this year, because the 0% is not a marketing gimmick funded by a token emission &mdash; it is funded by a real cash flow: weekly covered calls written on the collateral. That makes it worth taking seriously, and taking seriously means asking the question the docs never quite answer: <em>if the loan is free, who is paying for it?</em></p>
 
   <p>This review combines two passes. The first is a mechanism-and-economics teardown built from the public documentation (~40 <code>/docs</code> pages, cited inline). The second is a hands-on session against the live beta (<code>beta.spout.finance</code>) on <strong>11 September 2026</strong>, running on Solana <strong>devnet</strong>. I could exercise every read-only surface and the full quote/validation logic; I could not broadcast an on-chain buy or borrow, because devnet funding is external and rate-limited (see <a href="#method">Methodology</a>). Findings that require a funded position are labelled <span class="sev info">Blocked</span>.</p>
 
